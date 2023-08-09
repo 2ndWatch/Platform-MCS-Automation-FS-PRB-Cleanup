@@ -73,10 +73,6 @@ def get_open_problems(headers, old_prbs, offboarded_prbs, patching_prbs, prbs_to
             else:
                 more_pages = False
 
-            # Fields to use:
-            # created_at returns like "2023-07-20T11:58:14Z"
-            # department_id returns like 17000033204
-
             try:
                 for prb in data['problems']:
                     # Ignore closed PRBs
@@ -138,20 +134,40 @@ def close_problems(headers, old_prbs, offboarded_prbs, patching_prbs, logger):
 
         if prb_id in old_prbs:
             message = "PRB created prior to 2022"
+            root_cause = "Unable to determine"
+            impact = message
+            symptoms = "See description"
         elif prb_id in offboarded_prbs:
             message = "Client offboarded"
+            root_cause = "Unable to determine"
+            impact = "Not applicable - client offboarded"
+            symptoms = "Unable to determine"
         elif prb_id in patching_prbs:
-            message = "Patching PRB"
+            message = "Patching PRB addressed via another platform"
+            root_cause = 'Likely SSM- or Infraguard-related'
+            impact = "Patching event impeded"
+            symptoms = "Patching failed or not 100% successful"
         else:
             logger.warning(f'   PRB {prb_id} not found in one of the lists. Aborting.')
             sys.exit(1)
 
         # status: 3 = Closed, 6 = Resolved
         json_data = {
-            "status": 3,
+            "status": 6,
+            "known_error": True,
             "custom_fields": {
-                "close_notes": message,
-                "resolution_summary": message
+                "resolution_summary": message,
+                "rca_status": "Completed",
+                "known_issue": True
+            },
+            "analysis_fields": {
+                "problem_cause": {
+                    "description": root_cause
+                }, "problem_symptom": {
+                    "description": symptoms
+                }, "problem_impact": {
+                    "description": impact
+                }
             }
         }
 
@@ -163,7 +179,7 @@ def close_problems(headers, old_prbs, offboarded_prbs, patching_prbs, logger):
 
             try:
                 if prb_id == data['problem']['id']:
-                    logger.info(f'   PRB {prb_id} has been successfully closed.')
+                    logger.info(f'   PRB {prb_id} has been successfully resolved.')
                     closed_count += 1
             except KeyError:
                 logger.warning('   Something went wrong.')
@@ -182,12 +198,14 @@ def main():
         'Authorization': f'Basic {sandbox_api_key}'
     }
 
+    # For testing PRB closure in Sandbox
     old_prbs = [1]
     offboarded_prbs = [2]
     patching_prbs = [3]
-    prbs_to_keep = []
+    prbs_to_keep = [4]
 
     logger = initialize_logger()
+
     # old_prbs, offboarded_prbs, patching_prbs, prbs_to_keep = get_open_problems(headers, old_prbs, offboarded_prbs,
     #                                                                            patching_prbs, prbs_to_keep, logger)
 
@@ -197,7 +215,7 @@ def main():
                 f'{close} PRBs to resolve.')
 
     closed, not_closed = close_problems(headers, old_prbs, offboarded_prbs, patching_prbs, logger)
-    logger.info(f'\n{closed} PRBs were closed. {close - closed} PRBs were not closed: {not_closed}')
+    logger.info(f'\n{closed} PRBs were resolved. {close - closed} PRBs were not resolved: {not_closed}')
 
 
 main()
