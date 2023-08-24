@@ -171,7 +171,7 @@ def close_problems(headers, old_prbs, offboarded_prbs, patching_prbs, logger):
             }
         }
 
-        response = requests.put(sandbox_url, headers=headers, json=json_data)
+        response = requests.put(url, headers=headers, json=json_data)
 
         if response.status_code == 200:
             # Parsing the JSON response
@@ -191,31 +191,36 @@ def close_problems(headers, old_prbs, offboarded_prbs, patching_prbs, logger):
 
 
 def main():
-    api_key = 'NmoxMjl2THVwMU9tTjBrUG5oRA=='
-    sandbox_api_key = 'VHA1S2xiRTlTOUNmTDY1ZGc1WA=='
+    api_key = ''
+    sandbox_api_key = ''
     headers = {
         'Content-Type': 'application/json',
-        'Authorization': f'Basic {sandbox_api_key}'
+        'Authorization': f'Basic {api_key}'
     }
 
     # For testing PRB closure in Sandbox
-    old_prbs = [1]
-    offboarded_prbs = [2]
-    patching_prbs = [3]
-    prbs_to_keep = [4]
+    old_prbs = []
+    offboarded_prbs = []
+    patching_prbs = []
+    prbs_to_keep = []
 
     logger = initialize_logger()
 
-    # old_prbs, offboarded_prbs, patching_prbs, prbs_to_keep = get_open_problems(headers, old_prbs, offboarded_prbs,
-    #                                                                            patching_prbs, prbs_to_keep, logger)
+    old_prbs, offboarded_prbs, patching_prbs, prbs_to_keep = get_open_problems(headers, old_prbs, offboarded_prbs,
+                                                                               patching_prbs, prbs_to_keep, logger)
 
     close = len(old_prbs) + len(offboarded_prbs) + len(patching_prbs)
     keeps = len(prbs_to_keep)
     logger.info(f'\nThere are {close + keeps} total open PRBs:\n   {keeps} PRBs to keep and '
                 f'{close} PRBs to resolve.')
+    choice = input(f'\nDo you want to resolve {close} PRBs? Enter "y" or "n": ')
 
-    closed, not_closed = close_problems(headers, old_prbs, offboarded_prbs, patching_prbs, logger)
-    logger.info(f'\n{closed} PRBs were resolved. {close - closed} PRBs were not resolved: {not_closed}')
+    if choice == 'y':
+        closed, not_closed = close_problems(headers, old_prbs, offboarded_prbs, patching_prbs, logger)
+        logger.info(f'\n{closed} PRBs were resolved. {close - closed} PRBs were not resolved: {not_closed}')
+    else:
+        logger.info('\nUser cancelled process. No PRBs were resolved.')
+        sys.exit()
 
 
 main()
